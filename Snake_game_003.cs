@@ -17,6 +17,16 @@ bool shouldExit = false;
 int screenWidthAtStart = Console.WindowWidth;
 int screenHeightAtStart = Console.WindowHeight;
 
+
+int totalEaten = 0;
+int score = 0;
+int targetScore = 20;
+
+
+int normalCount = 0;
+int superCount = 0;
+int debuffCount = 0;
+
 // Console position of the player
 int playerX = 1;
 int playerY = minHeight;
@@ -43,13 +53,56 @@ while (!shouldExit)
         TerminateGame("Terminal was resized. Program exit.");
 
     }
-    Move();
+
+    if (ShouldFreeze())
+    {
+        MessageText("You are frozen! Eating too much #...", ConsoleColor.Cyan);
+        FreezePlayer();
+        ClearMessage(messageRow);
+    }
+
+    int currentSpeed = ShouldSpeedUp() ? 3 : 1;
+
+
+    Move(currentSpeed);
 
     if (playerY == foodY && (playerX + player.Length > foodX && playerX < foodX + foods[food].Length))
     {
+        totalEaten++;
+
+        
+        if (food == 0) // @@@@@
+        {
+            score += 2;
+            normalCount++;
+        }
+        else if (food == 1) // $$$$$
+        {
+            score += 3;
+            superCount++;
+        }
+        else if (food == 2) // #####
+        {
+            score += 1;
+            debuffCount++;
+        }
+        
+        
+        
+        if (score < 0)
+        {
+            score = 0;
+        }
+
         ChangePlayer();
         ShowFood();
-        MessageText("Congratulation go next food" , ConsoleColor.Green);
+        UpdateStats(); 
+
+        // win check
+        if (score >= targetScore)
+        {
+            TerminateGame($"\nУРА! ВИ ПЕРЕМОГЛИ! Набрано {score} балів.");
+        }
     }
 }
 
@@ -95,8 +148,18 @@ void FreezePlayer()
     player = states[0];
 }
 
+bool ShouldFreeze()
+{
+    return player == states[2]; // (X_X)
+}
+
+bool ShouldSpeedUp()
+{
+    return player == states[1]; // (^-^)
+}
+
 // Reads directional input from the Console and moves the player
-void Move(bool quitIfInvalid = false)
+void Move(int speed = 1, bool quitIfInvalid = false)
 {
     int lastX = playerX;
     int lastY = playerY;
@@ -117,11 +180,11 @@ void Move(bool quitIfInvalid = false)
             ClearMessage(messageRow);
             break;
         case ConsoleKey.LeftArrow:
-            playerX--;
+            playerX -= speed;
             ClearMessage(messageRow);
             break;
         case ConsoleKey.RightArrow:
-            playerX++;
+            playerX += speed;
             ClearMessage(messageRow);
             break;
         case ConsoleKey.Escape:
@@ -173,7 +236,7 @@ void DrawInterface()
 {
     Console.Clear();
     Console.SetCursorPosition(0, 0);
-    Console.Write("Something text");
+    UpdateStats();
     Console.SetCursorPosition(0, topDividerRow);
     Console.Write(new string('-', Console.WindowWidth));
 
@@ -210,7 +273,7 @@ void TerminateGame(string message = "")
 
 }
 
-void MessageText(string message = "" , ConsoleColor color = ConsoleColor.White)
+void MessageText(string message = "", ConsoleColor color = ConsoleColor.White)
 {
     ClearMessage(messageRow);
     Console.SetCursorPosition(0, messageRow);
@@ -218,6 +281,24 @@ void MessageText(string message = "" , ConsoleColor color = ConsoleColor.White)
     Console.Write(message);
     Console.ResetColor();
 
+}
+
+void UpdateStats()
+{
+    Console.SetCursorPosition(0, 0);
+    Console.Write(new string(' ', Console.WindowWidth));
+    Console.SetCursorPosition(0, 0);
+
+    Console.ForegroundColor = ConsoleColor.Yellow;
+    Console.Write($"Score: {score}/{targetScore} | ");
+    Console.ResetColor();
+
+    Console.Write($"Total: {totalEaten} (");
+    Console.ForegroundColor = ConsoleColor.Gray; Console.Write($"@:{normalCount} ");
+    Console.ForegroundColor = ConsoleColor.Green; Console.Write($"$:{superCount} ");
+    Console.ForegroundColor = ConsoleColor.Red; Console.Write($"#:{debuffCount}");
+    Console.ResetColor();
+    Console.Write(")");
 }
 
 void InitializeGame()
