@@ -1,15 +1,25 @@
-using System;
+// using System;
 using System.Reflection.Metadata;
 
 Random random = new Random();
 Console.CursorVisible = false;
-int height = Console.WindowHeight - 3;
+
+int topDividerRow = 1;
+int bottomDividerRow = Console.WindowHeight - 2;
+int messageRow = bottomDividerRow + 1;
+
+int minHeight = 2;
+int height = bottomDividerRow;
 int width = Console.WindowWidth - 5;
 bool shouldExit = false;
 
+
+int screenWidthAtStart = Console.WindowWidth;
+int screenHeightAtStart = Console.WindowHeight;
+
 // Console position of the player
-int playerX = 0;
-int playerY = 0;
+int playerX = 1;
+int playerY = minHeight;
 
 // Console position of the food
 int foodX = 0;
@@ -30,29 +40,40 @@ while (!shouldExit)
 {
     if (TerminalResized())
     {
-        Console.Clear();
-        Console.WriteLine("Terminal was resized. Program exit");
-        shouldExit = true;
-        continue;
+        TerminateGame("Terminal was resized. Program exit.");
+
     }
     Move();
+
+    if (playerY == foodY && (playerX + player.Length > foodX && playerX < foodX + foods[food].Length))
+    {
+        ChangePlayer();
+        ShowFood();
+        MessageText("Congratulation go next food" , ConsoleColor.Green);
+    }
 }
 
 // Returns true if the Terminal was resized 
 bool TerminalResized()
 {
-    return height != Console.WindowHeight - 3 || width != Console.WindowWidth - 5;
+    return screenHeightAtStart != Console.WindowHeight || screenWidthAtStart != Console.WindowWidth;
 }
 
 // Displays random food at a random location
 void ShowFood()
 {
+
+    if (foodX != 0 || foodY != 0)
+    {
+        Console.SetCursorPosition(foodX, foodY);
+        Console.Write(new string(' ', foods[food].Length));
+    }
     // Update food to a random index
     food = random.Next(0, foods.Length);
 
     // Update food position to a random location
     foodX = random.Next(0, width - player.Length);
-    foodY = random.Next(0, height - 1);
+    foodY = random.Next(minHeight, bottomDividerRow);
 
     // Display the food at the location
     Console.SetCursorPosition(foodX, foodY);
@@ -81,10 +102,11 @@ void Move(bool quitIfInvalid = false)
     int lastY = playerY;
 
 
-    int messageRow = height - 1;
+
+
     ConsoleKey inputKey = Console.ReadKey(true).Key;
 
-    switch (Console.ReadKey(true).Key)
+    switch (inputKey)
     {
         case ConsoleKey.UpArrow:
             playerY--;
@@ -103,20 +125,16 @@ void Move(bool quitIfInvalid = false)
             ClearMessage(messageRow);
             break;
         case ConsoleKey.Escape:
-            shouldExit = true;
-            ClearMessage(messageRow);
+            TerminateGame("Game terminated by user.");
             break;
         default:
             if (quitIfInvalid)
             {
-                shouldExit = true;
+                TerminateGame("Invalid key pressed. Exiting...");
             }
             else
             {
-                Console.SetCursorPosition(0, messageRow);
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.Write("Invalid key use arrows");
-                Console.ResetColor();
+                MessageText("Invalid key please use arrows", ConsoleColor.Red);
             }
             break;
 
@@ -130,8 +148,10 @@ void Move(bool quitIfInvalid = false)
     }
 
     // Keep player position within the bounds of the Terminal window
-    playerY = (playerY < 0) ? 0 : (playerY >= messageRow - 1 ? messageRow - 1 : playerY);
-    playerX = (playerX < 0) ? 0 : (playerX >= width ? width : playerX);
+    int maxX = Console.WindowWidth - 1 - player.Length;
+
+    playerX = (playerX < 1) ? 1 : (playerX > maxX ? maxX : playerX);
+    playerY = (playerY < minHeight) ? minHeight : (playerY >= bottomDividerRow ? bottomDividerRow - 1 : playerY);
 
     // Draw the player at the new location
     Console.SetCursorPosition(playerX, playerY);
@@ -140,20 +160,71 @@ void Move(bool quitIfInvalid = false)
 
 void ClearMessage(int row)
 {
-    // Перевіряємо, чи ми в межах консолі
+
     if (row >= 0 && row < Console.BufferHeight)
     {
         Console.SetCursorPosition(0, row);
-        // Друкуємо рядок пробілів довжиною на все вікно
+
         Console.Write(new string(' ', Console.WindowWidth));
     }
 }
 
+void DrawInterface()
+{
+    Console.Clear();
+    Console.SetCursorPosition(0, 0);
+    Console.Write("Something text");
+    Console.SetCursorPosition(0, topDividerRow);
+    Console.Write(new string('-', Console.WindowWidth));
+
+
+
+    for (int i = topDividerRow + 1; i < bottomDividerRow; i++)
+    {
+        // Ліва межа
+        Console.SetCursorPosition(0, i);
+        Console.Write("|");
+
+        // Права межа
+        // Використовуємо WindowWidth - 1, щоб лінія була в самому краї
+        Console.SetCursorPosition(Console.WindowWidth - 1, i);
+        Console.Write("|");
+    }
+
+    // НИЗ: Лінія
+    Console.SetCursorPosition(0, bottomDividerRow);
+    Console.Write(new string('-', Console.WindowWidth));
+}
+
 // Clears the console, displays the food and player
+void TerminateGame(string message = "")
+{
+    Console.Clear();
+    Console.CursorVisible = true;
+    if (!string.IsNullOrEmpty(message))
+    {
+        Console.Write(message);
+
+    }
+    Environment.Exit(0);
+
+}
+
+void MessageText(string message = "" , ConsoleColor color = ConsoleColor.White)
+{
+    ClearMessage(messageRow);
+    Console.SetCursorPosition(0, messageRow);
+    Console.ForegroundColor = color;
+    Console.Write(message);
+    Console.ResetColor();
+
+}
+
 void InitializeGame()
 {
     Console.Clear();
+    DrawInterface();
     ShowFood();
-    Console.SetCursorPosition(0, 0);
+    Console.SetCursorPosition(playerX, playerY);
     Console.Write(player);
 }
